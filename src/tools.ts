@@ -2,6 +2,7 @@ import {
   searchMovies,
   getTrendingMovies,
   getSimilarMovies,
+  getMovieDetails,
 } from "./tmdb-api.js";
 
 export const tools = {
@@ -52,12 +53,29 @@ export const tools = {
       required: ["movieId"],
     },
   },
+  "get-movie-details": {
+    name: "get-movie-details",
+    description: "Get detailed information about a specific movie",
+    inputSchema: {
+      type: "object",
+      properties: {
+        movieId: {
+          type: "string",
+          description: "ID of the movie to get details for",
+        },
+      },
+      required: ["movieId"],
+    },
+  },
 };
 
 export const toolHandlers = {
-  "search-movies": async ({ query, page = 1 }: { 
-    query: string; 
-    page?: number 
+  "search-movies": async ({
+    query,
+    page = 1,
+  }: {
+    query: string;
+    page?: number;
   }) => {
     try {
       // Return the raw results directly
@@ -66,11 +84,13 @@ export const toolHandlers = {
       if (error instanceof Error) {
         throw new Error(`Failed to search movies: ${error.message}`);
       }
-      throw new Error('Failed to search movies: Unknown error');
+      throw new Error("Failed to search movies: Unknown error");
     }
   },
-  "get-trending": async ({ timeWindow = "week" }: { 
-    timeWindow?: "day" | "week" 
+  "get-trending": async ({
+    timeWindow = "week",
+  }: {
+    timeWindow?: "day" | "week";
   }) => {
     try {
       // Return the raw results directly
@@ -79,7 +99,7 @@ export const toolHandlers = {
       if (error instanceof Error) {
         throw new Error(`Failed to get trending movies: ${error.message}`);
       }
-      throw new Error('Failed to get trending movies: Unknown error');
+      throw new Error("Failed to get trending movies: Unknown error");
     }
   },
   "get-similar": async ({ movieId }: { movieId: string }) => {
@@ -90,7 +110,18 @@ export const toolHandlers = {
       if (error instanceof Error) {
         throw new Error(`Failed to get similar movies: ${error.message}`);
       }
-      throw new Error('Failed to get similar movies: Unknown error');
+      throw new Error("Failed to get similar movies: Unknown error");
+    }
+  },
+  "get-movie-details": async ({ movieId }: { movieId: string }) => {
+    try {
+      const result = await getMovieDetails(movieId);
+      return result;
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        return { text: `Failed to get movie details: ${error.message}` };
+      }
+      return { text: "Failed to get movie details: Unknown error" };
     }
   },
 };
