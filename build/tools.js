@@ -51,15 +51,8 @@ export const tools = {
 export const toolHandlers = {
     "search-movies": async ({ query, page = 1 }) => {
         try {
-            const results = await searchMovies(query, page);
-            return {
-                content: [
-                    {
-                        type: "text",
-                        text: JSON.stringify(results, null, 2),
-                    },
-                ],
-            };
+            // Return the raw results directly
+            return await searchMovies(query, page);
         }
         catch (error) {
             if (error instanceof Error) {
@@ -68,17 +61,10 @@ export const toolHandlers = {
             throw new Error('Failed to search movies: Unknown error');
         }
     },
-    "get-trending": async ({ timeWindow }) => {
+    "get-trending": async ({ timeWindow = "week" }) => {
         try {
-            const results = await getTrendingMovies(timeWindow);
-            return {
-                content: [
-                    {
-                        type: "text",
-                        text: JSON.stringify(results, null, 2),
-                    },
-                ],
-            };
+            // Return the raw results directly
+            return await getTrendingMovies(timeWindow);
         }
         catch (error) {
             if (error instanceof Error) {
@@ -89,15 +75,8 @@ export const toolHandlers = {
     },
     "get-similar": async ({ movieId }) => {
         try {
-            const results = await getSimilarMovies(movieId);
-            return {
-                content: [
-                    {
-                        type: "text",
-                        text: JSON.stringify(results, null, 2),
-                    },
-                ],
-            };
+            // Return the raw results directly
+            return await getSimilarMovies(movieId);
         }
         catch (error) {
             if (error instanceof Error) {

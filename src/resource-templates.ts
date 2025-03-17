@@ -18,12 +18,15 @@ export const getResourceTemplate = async (uri: string) => {
     
     return async () => {
       try {
+        // Get the raw movie details from your API
         const movieDetails = await getMovieDetails(movieId);
+        
+        // Return in the correct format expected by the MCP SDK
         return {
           contents: [
             {
               uri,
-              text: JSON.stringify(movieDetails, null, 2),
+              text: JSON.stringify(movieDetails, null, 2), // This should be the raw movie data
             },
           ],
         };
@@ -33,7 +36,6 @@ export const getResourceTemplate = async (uri: string) => {
         }
         throw new Error('Failed to fetch movie details: Unknown error');
       }
-      
     };
   }
   return null;

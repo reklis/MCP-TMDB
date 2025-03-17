@@ -14,12 +14,14 @@ export const getResourceTemplate = async (uri) => {
         const movieId = movieMatch[1];
         return async () => {
             try {
+                // Get the raw movie details from your API
                 const movieDetails = await getMovieDetails(movieId);
+                // Return in the correct format expected by the MCP SDK
                 return {
                     contents: [
                         {
                             uri,
-                            text: JSON.stringify(movieDetails, null, 2),
+                            text: JSON.stringify(movieDetails, null, 2), // This should be the raw movie data
                         },
                     ],
                 };

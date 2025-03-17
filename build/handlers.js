@@ -29,14 +29,6 @@ export const setupHandlers = (server) => {
         // Using type assertion to tell TypeScript this is a valid key
         const promptHandler = promptHandlers[name];
         if (promptHandler) {
-            // Use a type-safe approach that checks the expected prompt name
-            if (name === "movie-review") {
-                return promptHandler(args);
-            }
-            else if (name === "movie-recommendation") {
-                return promptHandler(args);
-            }
-            // Fallback for unknown prompt names
             return promptHandler(args);
         }
         throw new Error(`Prompt not found: ${name}`);
@@ -45,22 +37,41 @@ export const setupHandlers = (server) => {
     server.setRequestHandler(ListToolsRequestSchema, async () => ({
         tools: Object.values(tools),
     }));
+    // This is the key fix - we need to format the response properly
     server.setRequestHandler(CallToolRequestSchema, async (request) => {
-        const { name, arguments: args } = request.params;
-        // Using type assertion to tell TypeScript this is a valid key
-        const handler = toolHandlers[name];
-        if (!handler)
-            throw new Error(`Tool not found: ${name}`);
-        if (name === "search-movies") {
-            return await handler(args);
+        try {
+            const { name, arguments: args } = request.params;
+            // Using type assertion to tell TypeScript this is a valid key
+            const handler = toolHandlers[name];
+            if (!handler)
+                throw new Error(`Tool not found: ${name}`);
+            // Execute the handler but wrap the response in the expected format
+            const result = await handler(args);
+            // Return in the format expected by the SDK
+            return {
+                tools: [{
+                        name,
+                        inputSchema: {
+                            type: "object",
+                            properties: {} // This would ideally be populated with actual schema
+                        },
+                        description: `Tool: ${name}`,
+                        result
+                    }]
+            };
         }
-        else if (name === "get-trending") {
-            return await handler(args);
+        catch (error) {
+            // Properly handle errors
+            if (error instanceof Error) {
+                return {
+                    tools: [],
+                    error: error.message
+                };
+            }
+            return {
+                tools: [],
+                error: "An unknown error occurred"
+            };
         }
-        else if (name === "get-similar") {
-            return await handler(args);
-        }
-        // Fallback for unknown tool names
-        return await handler(args);
     });
 };

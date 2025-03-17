@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { TMDB_API_KEY, TMDB_BASE_URL } from './config.js';
-// Create an axios instance with default configurations
+// Axios instance with default configurations
 const tmdbClient = axios.create({
     baseURL: TMDB_BASE_URL,
     timeout: 10000, // 10 seconds timeout
@@ -8,7 +8,7 @@ const tmdbClient = axios.create({
         api_key: TMDB_API_KEY
     }
 });
-// Implement retry logic
+// Retry logic
 const axiosWithRetry = async (config, retries = 3, backoff = 300) => {
     try {
         return await tmdbClient(config);
