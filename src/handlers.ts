@@ -58,8 +58,36 @@ export const setupHandlers = (server: McpServer): void => {
 
   // Register tools
   Object.entries(tools).forEach(([name, tool]) => {
-    // For now, use a simple object schema for all tools to avoid enum issues
-    const zodSchema = {};
+    // Convert inputSchema to Zod schema
+    const zodSchema: Record<string, any> = {};
+    
+    if (tool.inputSchema && tool.inputSchema.properties) {
+      Object.entries(tool.inputSchema.properties).forEach(([propName, propDef]: [string, any]) => {
+        let propSchema;
+        
+        if (propDef.type === "string") {
+          if (propDef.enum) {
+            // Handle enum values
+            const enumValues = propDef.enum as [string, ...string[]];
+            propSchema = z.enum(enumValues);
+          } else {
+            propSchema = z.string();
+          }
+        } else if (propDef.type === "number") {
+          propSchema = z.number();
+        } else {
+          propSchema = z.any();
+        }
+        
+        // Make optional if not in required array
+        const requiredFields = tool.inputSchema.required as string[] | undefined;
+        if (!requiredFields || !requiredFields.includes(propName)) {
+          propSchema = propSchema.optional();
+        }
+        
+        zodSchema[propName] = propSchema;
+      });
+    }
 
     server.tool(name, tool.description, zodSchema, async (args: any) => {
       const handler = toolHandlers[name as keyof typeof toolHandlers];
