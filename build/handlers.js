@@ -1,77 +1,64 @@
-import { CallToolRequestSchema, GetPromptRequestSchema, ListPromptsRequestSchema, ListResourcesRequestSchema, ListResourceTemplatesRequestSchema, ListToolsRequestSchema, ReadResourceRequestSchema, } from "@modelcontextprotocol/sdk/types.js";
-import { resourceHandlers, resources } from "./resources.js";
-import { getResourceTemplate, resourceTemplates } from "./resource-templates.js";
+import { resourceHandlers } from "./resources.js";
 import { promptHandlers, prompts } from "./prompts.js";
 import { toolHandlers, tools } from "./tools.js";
+import { z } from "zod";
 export const setupHandlers = (server) => {
-    // Resource handlers
-    server.setRequestHandler(ListResourcesRequestSchema, async () => ({ resources }));
-    server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => ({
-        resourceTemplates,
-    }));
-    server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-        const { uri } = request.params;
-        // Using type assertion to tell TypeScript this is a valid key
-        const resourceHandler = resourceHandlers[uri];
+    // Register static resources
+    server.resource("TMDB Info", "tmdb://info", async () => {
+        const resourceHandler = resourceHandlers["tmdb://info"];
         if (resourceHandler)
             return await resourceHandler();
-        const resourceTemplateHandler = await getResourceTemplate(uri);
-        if (resourceTemplateHandler)
-            return await resourceTemplateHandler();
-        throw new Error(`Resource not found: ${uri}`);
+        throw new Error("Resource not found: tmdb://info");
     });
-    // Prompt handlers
-    server.setRequestHandler(ListPromptsRequestSchema, async () => ({
-        prompts: Object.values(prompts),
-    }));
-    server.setRequestHandler(GetPromptRequestSchema, async (request) => {
-        const { name, arguments: args } = request.params;
-        // Using type assertion to tell TypeScript this is a valid key
-        const promptHandler = promptHandlers[name];
-        if (promptHandler) {
-            return promptHandler(args);
-        }
-        throw new Error(`Prompt not found: ${name}`);
+    server.resource("Trending Movies", "tmdb://trending", async () => {
+        const resourceHandler = resourceHandlers["tmdb://trending"];
+        if (resourceHandler)
+            return await resourceHandler();
+        throw new Error("Resource not found: tmdb://trending");
     });
-    // Tool handlers
-    server.setRequestHandler(ListToolsRequestSchema, async () => ({
-        tools: Object.values(tools),
-    }));
-    // This is the key fix - we need to format the response properly
-    server.setRequestHandler(CallToolRequestSchema, async (request) => {
-        try {
-            const { name, arguments: args } = request.params;
-            // Using type assertion to tell TypeScript this is a valid key
+    // Register prompts
+    Object.entries(prompts).forEach(([name, prompt]) => {
+        // Convert the arguments array to a Zod schema
+        const argsSchema = {};
+        prompt.arguments.forEach((arg) => {
+            argsSchema[arg.name] = arg.required ? z.string() : z.string().optional();
+        });
+        server.prompt(name, prompt.description, argsSchema, async (args) => {
+            const promptHandler = promptHandlers[name];
+            if (promptHandler) {
+                const result = promptHandler(args);
+                return {
+                    messages: [
+                        {
+                            role: "user",
+                            content: {
+                                type: "text",
+                                text: result.messages[0].content.text,
+                            },
+                        },
+                    ],
+                };
+            }
+            throw new Error(`Prompt not found: ${name}`);
+        });
+    });
+    // Register tools
+    Object.entries(tools).forEach(([name, tool]) => {
+        // For now, use a simple object schema for all tools to avoid enum issues
+        const zodSchema = {};
+        server.tool(name, tool.description, zodSchema, async (args) => {
             const handler = toolHandlers[name];
             if (!handler)
                 throw new Error(`Tool not found: ${name}`);
-            // Execute the handler but wrap the response in the expected format
             const result = await handler(args);
-            // Return in the format expected by the SDK
             return {
-                tools: [{
-                        name,
-                        inputSchema: {
-                            type: "object",
-                            properties: {} // This would ideally be populated with actual schema
-                        },
-                        description: `Tool: ${name}`,
-                        result
-                    }]
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify(result, null, 2),
+                    },
+                ],
             };
-        }
-        catch (error) {
-            // Properly handle errors
-            if (error instanceof Error) {
-                return {
-                    tools: [],
-                    error: error.message
-                };
-            }
-            return {
-                tools: [],
-                error: "An unknown error occurred"
-            };
-        }
+        });
     });
 };
